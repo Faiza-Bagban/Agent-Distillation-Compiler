@@ -21,8 +21,12 @@ def planner_node(state: PipelineState) -> PipelineState:
     state["plan"] = plan(state["problem"])
     return state
 
+# def coder_node(state: PipelineState) -> PipelineState:
+#     state["code"] = generate_code(state["problem"], state["plan"])
+#     return state
+
 def coder_node(state: PipelineState) -> PipelineState:
-    state["code"] = generate_code(state["problem"], state["plan"])
+    state["code"] = generate_code(state["problem"], state["plan"], state["test_code"])
     return state
 
 def tester_node(state: PipelineState) -> PipelineState:
@@ -31,8 +35,13 @@ def tester_node(state: PipelineState) -> PipelineState:
     state["error"] = error
     return state
 
+# def debugger_node(state: PipelineState) -> PipelineState:
+#     state["code"] = debug(state["problem"], state["code"], state["error"])
+#     state["retries"] = state.get("retries", 0) + 1
+#     return state
+
 def debugger_node(state: PipelineState) -> PipelineState:
-    state["code"] = debug(state["problem"], state["code"], state["error"])
+    state["code"] = debug(state["problem"], state["code"], state["test_code"], state["error"])
     state["retries"] = state.get("retries", 0) + 1
     return state
 
