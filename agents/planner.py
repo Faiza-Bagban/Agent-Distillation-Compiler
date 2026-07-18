@@ -15,11 +15,19 @@ Problem:
 {problem}
 """
 
+import time
+
 def plan(problem: str) -> str:
-    response = requests.post(OLLAMA_URL, json={
-        "model": MODEL,
-        "prompt": PLANNER_PROMPT.format(problem=problem),
-        "stream": False
-    })
-    response.raise_for_status()
-    return response.json()["response"]
+    for attempt in range(3):
+        try:
+            response = requests.post(OLLAMA_URL, json={
+                "model": MODEL,
+                "prompt": PLANNER_PROMPT.format(problem=problem),
+                "stream": False
+            })
+            response.raise_for_status()
+            return response.json()["response"]
+        except requests.exceptions.HTTPError:
+            if attempt == 2:
+                raise
+            time.sleep(5)
