@@ -50,15 +50,13 @@ def test_code_calls_teacher_router_and_strips_fences(mock_call):
     assert result == "def f(): return 1"
     mock_call.assert_called_once()
 
-
 def test_sandbox_pass_case():
     from agents.sandbox_executor import run_in_sandbox
     result = run_in_sandbox(
         "def add(a, b):\n    return a + b\n",
         "def test_add():\n    assert add(2, 3) == 5\n\ntest_add()\n",
     )
-    assert result["passed"] is True
-
+    assert result["passed"] is True, f"stderr was: {result.get('stderr')}"
 
 def test_sandbox_timeout_case():
     from agents.sandbox_executor import run_in_sandbox
