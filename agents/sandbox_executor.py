@@ -135,6 +135,7 @@ def run_in_sandbox(code: str, test_code: str, timeout_seconds: int = TIMEOUT_SEC
                 security_opt=["no-new-privileges"],  # can't gain new privileges via setuid etc.
                 read_only=True,                 # root filesystem read-only, only /sandbox is writable
                 tmpfs={"/tmp": "size=32m,noexec"},   # writable scratch space, but no exec allowed there
+                environment={"PYTHONDONTWRITEBYTECODE": "1"},
                 detach=True,
             )
             result = container.wait(timeout=timeout_seconds)
