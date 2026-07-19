@@ -56,6 +56,20 @@ def merge_trajectories(files: list[str], output_file: str) -> dict:
     return merged
 
 
+def clean_final_code(code: str) -> str:
+    """
+    Keep only the function definition(s) — strip trailing example usage,
+    assert statements, or __main__ blocks that leaked from debug/verification steps.
+    """
+    lines = code.split("\n")
+    cleaned = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("if __name__") or stripped.startswith("assert ") or stripped.startswith("print("):
+            break
+        cleaned.append(line)
+    return "\n".join(cleaned).rstrip()
+
 def compress(problem: str, plan: str, code: str) -> str:
     response = requests.post(OLLAMA_URL, json={
         "model": MODEL,
@@ -96,10 +110,11 @@ def compress_dataset(input_file: str, output_file: str):
             continue
         print(f"Compressing {key}...")
         try:
+            
             compressed[key] = {
                 "problem": traj["problem"],
                 "compressed_cot": compress(traj["problem"], traj.get("plan", ""), traj["code"]),
-                "final_code": traj["code"]
+                "final_code": clean_final_code(traj["code"])
             }
         except Exception as e:
             print(f"  Skipping {key} due to error: {e}")
