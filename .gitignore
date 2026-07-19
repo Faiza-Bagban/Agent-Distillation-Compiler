@@ -33,3 +33,5 @@ wandb/
 .DS_Store
 Thumbs.db
 unsloth_compiled_cache/
+
+training/checkpoints/
