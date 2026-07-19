@@ -1,11 +1,11 @@
 """
-QLoRA fine-tune, Sakshi's secondary experiment -- Llama3.1-8B-Instruct, rank 16.
+QLoRA fine-tune, Sakshi's secondary experiment -- Llama3.1-8B-Instruct, rank 4.
 Base model differs from Faiza's/Yeshita's Qwen2.5-Coder-7B runs, for a
 base-model comparison (Week 5 Fri task).
-Sized for 6GB VRAM (RTX 4050): batch 1, grad accum 16, gradient checkpointing on.
+Sized for 6GB VRAM (RTX 4050): rank cut to 4, seq_len 512 (8B model has
+less headroom than the 7B models everyone else is using).
 """
 
-import os
 from unsloth import FastLanguageModel
 
 # --- Same Windows fix as Yeshita's ablation run (unslothai/unsloth#3827) ---
@@ -23,12 +23,12 @@ from datasets import load_dataset
 from trl import SFTTrainer, SFTConfig
 import torch
 
-from training.wandb_config import init_wandb_run
+from wandb_config import init_wandb_run
 
 MODEL_NAME = "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit"
-MAX_SEQ_LENGTH = 1024
-LORA_RANK = 16
-OUTPUT_DIR = "models/sakshi_llama31_8b_rank16"
+MAX_SEQ_LENGTH = 512
+LORA_RANK = 4
+OUTPUT_DIR = "models/sakshi_llama31_8b_rank4"
 
 
 def formatting_func(example):
@@ -37,7 +37,7 @@ def formatting_func(example):
 
 def main():
     run = init_wandb_run(
-        run_name="sakshi-llama31-8b-rank16",
+        run_name="sakshi-llama31-8b-rank4",
         config={
             "base_model": MODEL_NAME,
             "rank": LORA_RANK,
@@ -45,7 +45,7 @@ def main():
             "grad_accum": 16,
             "max_seq_length": MAX_SEQ_LENGTH,
         },
-        tags=["secondary-experiment", "llama3.1", "rank16"],
+        tags=["secondary-experiment", "llama3.1", "rank4"],
     )
 
     model, tokenizer = FastLanguageModel.from_pretrained(
@@ -60,7 +60,7 @@ def main():
         model,
         r=LORA_RANK,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-        lora_alpha=32,
+        lora_alpha=16,
         lora_dropout=0.05,
         bias="none",
         use_gradient_checkpointing=True,
@@ -82,7 +82,7 @@ def main():
         args=SFTConfig(
             per_device_train_batch_size=1,
             gradient_accumulation_steps=16,
-            num_train_epochs=3,
+            num_train_epochs=1,
             learning_rate=2e-4,
             logging_steps=5,
             output_dir=OUTPUT_DIR,
@@ -98,7 +98,7 @@ def main():
     )
 
     trainer.train()
-    model.save_pretrained(OUTPUT_DIR)
+    model.save_pretrained(OUTPUT_DIR, save_method="lora")
     tokenizer.save_pretrained(OUTPUT_DIR)
     run.finish()
 
