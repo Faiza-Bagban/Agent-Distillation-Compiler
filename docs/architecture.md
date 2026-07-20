@@ -142,3 +142,40 @@ Week 4 Thu task) so Faiza's and Yeshita's runs are comparable side by side.
   can be used reliably for future trajectory collection.
 - Dataset size (174 training examples) may need expansion depending on
   Week 5 checkpoint eval results.
+
+
+  ## Hybrid Router - Yeshita
+
+**Purpose:** route incoming tasks to the fast student model (cheap, single-pass) or
+fall back to the full multi-agent teacher pipeline (expensive, higher accuracy),
+based on estimated task complexity.
+
+**Approach:** lightweight logistic regression classifier (`inference/router.py`),
+trained on 4 hand-crafted features extracted from the problem text:
+- Character length
+- Newline count
+- Loop keyword count (`for`/`while`)
+- Function definition count
+
+**Training data:** 538 labeled examples built from all three team members'
+trajectory collection results (`inference/build_router_training_data.py`).
+Label derived from actual pipeline behavior: tasks needing 2+ debug retries or
+that never passed are labeled "hard" (route to teacher); tasks solved cleanly
+are labeled "easy" (route to student). Balanced set: 265 easy / 273 hard.
+
+**Result:** 70.4% accuracy on a held-out 20% split (76/108 correct).
+Meaningfully better than chance, though the simple feature set has real limits —
+this is a heuristic router, not a strong classifier. Room for improvement:
+embedding-based features or a small learned model would likely outperform
+hand-crafted keyword counts, but wasn't pursued given time constraints.
+
+**Usage:**
+```python
+from inference.router import ComplexityRouter
+router = ComplexityRouter.load("models/router.pkl")
+decision = router.predict(problem_text)  # returns "teacher" or "student"
+```
+
+**Integration:** consumed by `inference/serve.py` (Sakshi, Week 7) to decide
+per-request whether to call the fine-tuned student checkpoint directly or
+invoke the full teacher pipeline.
