@@ -36,3 +36,5 @@ Thumbs.db
 unsloth_compiled_cache/
 
 training/checkpoints/
+
+models/
