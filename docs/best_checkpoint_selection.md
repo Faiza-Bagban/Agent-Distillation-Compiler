@@ -9,6 +9,8 @@
 | checkpoint-27 | 3 | 0.505  | 87.5% (14/16) |
 | checkpoint-36 | 4 | 0.495  | 87.5% (14/16) |
 
+| Yeshita (ablation) | 8 | 0.538 | 88.2% (15/17) | 139 train examples, seq_len 1024 |
+
 ## Decision
 **Selected: checkpoint-36 (epoch 4)**
 
