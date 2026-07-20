@@ -42,3 +42,4 @@ models/*
 !models/qlora-primary-final-metadata.json
 !models/router.pkl
 !evaluation/results/teacher_baseline.json
+llama.cpp/
