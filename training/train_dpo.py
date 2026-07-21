@@ -22,24 +22,28 @@ import json
 from datasets import Dataset
 from trl import DPOTrainer, DPOConfig
 
-CHECKPOINT_DIR = "models/qlora-primary-final"
+# CHECKPOINT_DIR = "models/qlora-primary-final"
+CHECKPOINT_DIR = "models/yeshita_ablation_rank16"
+# CHECKPOINT_DIR = "models/yeshita_ablation_rank16_merged"
 DPO_PAIRS_FILE = "datasets/raw/dpo_pairs_faiza_14b.json"
 OUTPUT_DIR = "models/qlora-primary-dpo"
-MAX_SEQ_LENGTH = 1024  # reduced from Faiza's 2048 — DPO needs more headroom
+MAX_SEQ_LENGTH = 512  # reduced from Faiza's 2048 — DPO needs more headroom
 
 
 def build_dpo_dataset(pairs_file: str) -> Dataset:
     with open(pairs_file) as f:
         raw = json.load(f)
 
+    MAX_CHARS = 800  # defensive cap, avoids OOM spikes from long examples
+
     examples = []
     for task_id, entry in raw.items():
-        problem = entry.get("problem", "")
+        problem = entry.get("problem", "")[:MAX_CHARS]
         for pair in entry.get("pairs", []):
             examples.append({
                 "prompt": f"Problem:\n{problem}\n\nSolve this in Python.",
-                "chosen": pair["preferred"],
-                "rejected": pair["rejected"],
+                "chosen": pair["preferred"][:MAX_CHARS],
+                "rejected": pair["rejected"][:MAX_CHARS],
             })
     return Dataset.from_list(examples)
 
@@ -52,16 +56,9 @@ def main():
         load_in_4bit=True,
         device_map={"": 0},
     )
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r=16,  # reduced from her rank 32 for DPO's extra memory overhead
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-        lora_alpha=32,
-        lora_dropout=0.05,
-        bias="none",
-        use_gradient_checkpointing=True,
-        random_state=42,
-    )
+    # NOTE: no get_peft_model() call — this checkpoint already has a LoRA
+    # adapter attached (rank 8, from the original SFT run). DPO continues
+    # training that same adapter directly.
 
     dataset = build_dpo_dataset(DPO_PAIRS_FILE)
     print(f"DPO dataset: {len(dataset)} preference pairs")
@@ -78,12 +75,9 @@ def main():
             logging_steps=5,
             output_dir=OUTPUT_DIR,
             save_strategy="epoch",
-            fp16=False,
             bf16=True,
             optim="adamw_8bit",
-            beta=0.1,
-            max_length=MAX_SEQ_LENGTH,
-            max_prompt_length=512,
+            max_length=512,
         ),
     )
     trainer.train()
